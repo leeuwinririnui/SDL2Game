@@ -22,7 +22,8 @@ class LTexture {
             int x, 
             int y, 
             SDL_Rect* clip = nullptr, 
-            int scale = 1
+            int scale = 1,
+            SDL_RendererFlip flip = SDL_FLIP_NONE
         );
 
         // Get image dimensions
@@ -114,7 +115,8 @@ void LTexture::render(
     int x,
     int y, 
     SDL_Rect* clip, 
-    int scale
+    int scale,
+    SDL_RendererFlip flip
 ) {
     // Set rendering space and render to screen
     SDL_Rect renderQuad = { 
@@ -129,7 +131,7 @@ void LTexture::render(
         renderQuad.h = clip->h * scale;
     }
 
-    SDL_RenderCopy(gameRenderer, mTexture, clip, &renderQuad);
+    SDL_RenderCopyEx(gameRenderer, mTexture, clip, &renderQuad, 0.0, nullptr, flip);
 }
 
 int LTexture::getWidth() {

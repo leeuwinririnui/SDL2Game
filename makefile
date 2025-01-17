@@ -1,5 +1,5 @@
-main:
-	g++ -Isrc/Include -Isrc/header -Lsrc/lib -o main main.cpp -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
+main: main.cpp
+	g++ -I src/Include -I src/header -L src/lib -o main main.cpp -lSDL2 -lSDL2_image
 
 clean:
-	del -f main.exe
+	rm -f main
