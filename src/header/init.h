@@ -15,6 +15,12 @@ bool init(
         return false;
     }
 
+    // Initialize SDL_ttf
+    if (TTF_Init() == -1) {
+        std::cerr << "SDL_ttf could not initialize! TTF_Error: " << TTF_GetError() << std::endl;
+        return -1;
+    }
+
     // Set window flags and create window
     int winFlags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN;
     gameWindow = SDL_CreateWindow(
@@ -23,7 +29,7 @@ bool init(
         SDL_WINDOWPOS_CENTERED,
         SCREEN_WIDTH, 
         SCREEN_HEIGHT, 
-        winFlags
+        0 // Non resizable
     );
     
     if (!gameWindow) {

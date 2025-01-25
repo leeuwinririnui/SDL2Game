@@ -1,6 +1,19 @@
+#ifndef TEXTURE
+#define TEXTURE
+
 #include "includes.h"
 
 class LTexture {
+    private:
+        SDL_Renderer* gameRenderer;
+        
+        // The actual hardware texture
+        SDL_Texture* mTexture;
+
+        // Image dimensions
+        int mWidth;
+        int mHeight;
+        
     public:
         // Initialize variables
         LTexture(SDL_Renderer*& gameRenderer);
@@ -18,27 +31,11 @@ class LTexture {
         void free();
 
         // Renders texture at given point
-        void render(
-            int x, 
-            int y, 
-            SDL_Rect* clip = nullptr, 
-            int scale = 1,
-            SDL_RendererFlip flip = SDL_FLIP_NONE
-        );
+        void render(int x, int y, SDL_Rect* clip = nullptr, int scale = 1, SDL_RendererFlip flip = SDL_FLIP_NONE);
 
         // Get image dimensions
         int getWidth();
         int getHeight();
-
-    private:
-        SDL_Renderer* gameRenderer;
-        
-        // The actual hardware texture
-        SDL_Texture* mTexture;
-
-        // Image dimensions
-        int mWidth;
-        int mHeight;
 };
 
 LTexture::LTexture(SDL_Renderer*& gameRenderer) {
@@ -63,32 +60,19 @@ bool LTexture::loadFromFile(std::string path) {
 
     SDL_Surface* loadedSurface = IMG_Load(path.c_str());
     if (loadedSurface == NULL) {
-        std::cout << "Unable to load image " << path.c_str() 
-                  << "! SDL image Error: " << IMG_GetError() 
+        std::cout << "Unable to load image " << path.c_str() << "! SDL image Error: " << IMG_GetError() 
                   << std::endl; 
         return false;
     }
 
-    SDL_SetColorKey(
-        loadedSurface,
-        SDL_TRUE,
-        SDL_MapRGB(
-            loadedSurface->format,
-            0,
-            0xFF,
-            0xFF    
-        )
-    );
+    SDL_SetColorKey(loadedSurface, SDL_TRUE, SDL_MapRGB(loadedSurface->format,0,0xFF,0xFF));
 
     // Create texture from surface pixels
-    newTexture = SDL_CreateTextureFromSurface(
-        gameRenderer,
-        loadedSurface
-    );
+    newTexture = SDL_CreateTextureFromSurface(gameRenderer, loadedSurface);
 
     if (!newTexture) {
-        std::cout << "Unable to create texture from " << path.c_str() 
-                  << "! SDL Error: " << SDL_GetError() << std::endl; 
+        std::cout << "Unable to create texture from " << path.c_str() << "! SDL Error: " << SDL_GetError() 
+                  << std::endl; 
         SDL_FreeSurface(loadedSurface);
         return false;
     }
@@ -111,20 +95,9 @@ void LTexture::free() {
     }
 }
 
-void LTexture::render(
-    int x,
-    int y, 
-    SDL_Rect* clip, 
-    int scale,
-    SDL_RendererFlip flip
-) {
+void LTexture::render(int x, int y, SDL_Rect* clip, int scale,SDL_RendererFlip flip) {
     // Set rendering space and render to screen
-    SDL_Rect renderQuad = { 
-        x, 
-        y, 
-        mWidth * scale, 
-        mHeight * scale
-    };
+    SDL_Rect renderQuad = { x, y, mWidth * scale, mHeight * scale };
 
     if (clip) {
         renderQuad.w = clip->w * scale;
@@ -134,10 +107,7 @@ void LTexture::render(
     SDL_RenderCopyEx(gameRenderer, mTexture, clip, &renderQuad, 0.0, nullptr, flip);
 }
 
-int LTexture::getWidth() {
-    return mWidth;
-}
+int LTexture::getWidth() { return mWidth; }
+int LTexture::getHeight() { return mHeight; }
 
-int LTexture::getHeight() {
-    return mHeight;
-}
+#endif
