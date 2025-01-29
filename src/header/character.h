@@ -4,132 +4,60 @@
 #include "texture.h"
 
 class Character {
-private:
+protected:
     int health;
     std::string path;
     std::vector<SDL_Rect> &clips;
-    int frameWidth;
-    int frameHeight;
-    int row;
-    int offset;
-    int direction;
-    int currentFrame;
-    bool isMoving;
-    bool isAttacking;
+
+    int frameWidth, frameHeight, row, offset, direction, currentFrame;
+    bool isMoving, isAttacking, isAlive, isRespawning = false;
+
     SDL_RendererFlip flip;
-    int scale;
-    int posX;
-    int posY;
-    int frameTime;
-    bool isAlive;
-    bool isRespawning = false;
-    int padding;
-    int speed;
+    int scale, posX, posY, frameTime, padding; 
+    float speed;
 
     // Boundaries
-    int minX; 
-    int maxX;
-    int minY;
-    int maxY;
+    int minX, maxX, minY, maxY;
 
-    Uint32 lastFrame = 0;
-    Uint32 respawnStartTime;
+    Uint32 lastFrame = 0, respawnStartTime;
     int respawnDelay;
 
     // Animation rows
-    std::vector<int> idleRows;
-    std::vector<int> moveRows;
-    std::vector<int> attackRows;
+    std::vector<int> idleRows, moveRows, attackRows;
     int deathRow;
 
 public:
     LTexture& texture;
 
     // Constructor
-    Character(
-        int health,
-        LTexture &texture, 
-        const std::string &path,
-        std::vector<SDL_Rect> &clips, 
-        int frameWidth,
-        int frameHeight,
-        int row,
-        int offset,
-        int direction,          
-        int currentFrame,      
-        bool isMoving,     
-        bool isAttacking, 
-        SDL_RendererFlip flip,
-        int scale,
-        int posX,
-        int posY,
-        int frameTime,
-        bool isAlive,
-        int padding,
-        int speed
-    )
-    : health(health),
-      texture(texture), 
-      path(path),
-      clips(clips),
-      frameWidth(frameWidth),
-      frameHeight(frameHeight),
-      row(row),
-      offset(offset),
-      direction(direction),
-      currentFrame(currentFrame),
-      isMoving(isMoving),
-      isAttacking(isAttacking),
-      flip(flip),
-      scale(scale),
-      posX(posX),
-      posY(posY),
-      frameTime(frameTime),
-      isAlive(isAlive),
-      padding(padding),
-      speed(speed)
-    {}
+    Character(int health, LTexture &texture, const std::string &path, std::vector<SDL_Rect> &clips, 
+            int frameWidth, int frameHeight, int row, int offset, int direction, int currentFrame,
+            bool isMoving, bool isAttacking, SDL_RendererFlip flip, int scale, int posX, int posY,
+            int frameTime, bool isAlive, int padding, int speed) 
+    : health(health), texture(texture), path(path), clips(clips), frameWidth(frameWidth), 
+      frameHeight(frameHeight), row(row), offset(offset), direction(direction), 
+      currentFrame(currentFrame), isMoving(isMoving), isAttacking(isAttacking), flip(flip), 
+      scale(scale), posX(posX), posY(posY), frameTime(frameTime), isAlive(isAlive), 
+      padding(padding), speed(speed) {}
+
 
     // Methods
-    void resetStates();
-    void updateLastFrame() {
-        lastFrame = SDL_GetTicks();
-    }
-    Uint32 getLastFrame() {
-        return lastFrame;
-    }
+    virtual void resetStates() {}
+    
+    void updateLastFrame() { lastFrame = SDL_GetTicks(); }
+    Uint32 getLastFrame() { return lastFrame; }
 
     void spawn(int spawnX, int spawnY);
     void respawnTimer();
     void checkRespawn();
     
     // Bounding box calculations
-    SDL_Rect getBoundingBox() const {
-        SDL_Rect boundingBox = {
-            posX + padding,
-            posY + padding,
-            (frameWidth * scale) - (2 * padding),
-            (frameHeight * scale) - (2 * padding)
-        };
-        return boundingBox;
-    }
-
-    SDL_Point getBoundingBoxCenter() {
-        SDL_Rect boundingBox = getBoundingBox();
-        SDL_Point center;
-        center.x = boundingBox.x + boundingBox.w / 2; 
-        center.y = boundingBox.y + boundingBox.h / 2; 
-        return center;
-    }
+    SDL_Rect getBoundingBox() const;
+    SDL_Point getBoundingBoxCenter();
 
     // Methods to calculate center
-    int getCenterX() const {
-        return posX + frameWidth / 2;
-    }
-
-    int getCenterY() const {
-        return posY + frameHeight / 2;
-    }
+    int getCenterX() const { return posX + frameWidth / 2; }
+    int getCenterY() const { return posY + frameHeight / 2; }
 
     bool loadMedia();
     void spriteClip();
@@ -201,6 +129,24 @@ public:
 };
 
 // Method implementations
+SDL_Rect Character::getBoundingBox() const {
+        SDL_Rect boundingBox = {
+            posX + padding,
+            posY + padding,
+            (frameWidth * scale) - (2 * padding),
+            (frameHeight * scale) - (2 * padding)
+        };
+        return boundingBox;
+    }
+
+SDL_Point Character::getBoundingBoxCenter() {
+    SDL_Rect boundingBox = getBoundingBox();
+    SDL_Point center;
+    center.x = boundingBox.x + boundingBox.w / 2; 
+    center.y = boundingBox.y + boundingBox.h / 2; 
+    return center;
+}
+
 bool Character::loadMedia() {
     if (!texture.loadFromFile(path.c_str())) {
         std::cout << "Failed to load texture image " << path.c_str() << std::endl;
@@ -265,20 +211,9 @@ void Character::checkRespawn() {
             resetStates();
             setRandomSpawnPoints();
             spawn(getPosX(), getPosY());
-            std::cout << "Has Respawned" << std::endl;
+            std::cout << "Spawned" << std::endl;
         }
     }
-}
-
-void Character::resetStates() {
-    isAlive = true;
-    isRespawning = false;
-    isMoving = false;
-    isAttacking = false;
-    currentFrame = 0;
-    direction = 0;
-    row = idleRows[direction];
-    updateAnimation();
 }
 
 void Character::setRandomSpawnPoints() {

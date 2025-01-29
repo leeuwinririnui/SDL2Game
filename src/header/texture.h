@@ -4,38 +4,38 @@
 #include "includes.h"
 
 class LTexture {
-    private:
-        SDL_Renderer* gameRenderer;
-        
-        // The actual hardware texture
-        SDL_Texture* mTexture;
+private:
+    SDL_Renderer* gameRenderer;
+    
+    // The actual hardware texture
+    SDL_Texture* mTexture;
 
-        // Image dimensions
-        int mWidth;
-        int mHeight;
-        
-    public:
-        // Initialize variables
-        LTexture(SDL_Renderer*& gameRenderer);
+    // Image dimensions
+    int mWidth;
+    int mHeight;
+    
+public:
+    // Initialize variables
+    LTexture(SDL_Renderer*& gameRenderer);
 
-        // Deallocate memory
-        ~LTexture();
+    // Deallocate memory
+    ~LTexture();
 
-        // Set game renderer
-        void setRenderer(SDL_Renderer*& gameRenderer);
+    // Set game renderer
+    void setRenderer(SDL_Renderer*& gameRenderer);
 
-        // Loads image 
-        bool loadFromFile(std::string path);
+    // Loads image 
+    bool loadFromFile(std::string path);
 
-        // Deallocate texture
-        void free();
+    // Deallocate texture
+    void free();
 
-        // Renders texture at given point
-        void render(int x, int y, SDL_Rect* clip = nullptr, int scale = 1, SDL_RendererFlip flip = SDL_FLIP_NONE);
+    // Renders texture at given point
+    void render(int x, int y, SDL_Rect* clip = nullptr, int scale = 1, SDL_RendererFlip flip = SDL_FLIP_NONE);
 
-        // Get image dimensions
-        int getWidth();
-        int getHeight();
+    // Get image dimensions
+    int getWidth();
+    int getHeight();
 };
 
 LTexture::LTexture(SDL_Renderer*& gameRenderer) {
