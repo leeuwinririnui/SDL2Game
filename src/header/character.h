@@ -13,7 +13,7 @@ protected:
     bool isMoving, isAttacking, isAlive, isRespawning = false;
 
     SDL_RendererFlip flip;
-    int scale, posX, posY, frameTime, padding; 
+    int scale, posX, posY, frameTime, padding, attackCooldown, lastAttack = 0; 
     float speed;
 
     // Boundaries
@@ -27,19 +27,21 @@ protected:
     int deathRow;
 
 public:
-    LTexture& texture;
-
+    LTexture &texture;
     // Constructor
     Character(int health, LTexture &texture, const std::string &path, std::vector<SDL_Rect> &clips, 
             int frameWidth, int frameHeight, int row, int offset, int direction, int currentFrame,
             bool isMoving, bool isAttacking, SDL_RendererFlip flip, int scale, int posX, int posY,
-            int frameTime, bool isAlive, int padding, int speed) 
+            int frameTime, bool isAlive, int padding, int attackCooldown, int speed) 
     : health(health), texture(texture), path(path), clips(clips), frameWidth(frameWidth), 
       frameHeight(frameHeight), row(row), offset(offset), direction(direction), 
       currentFrame(currentFrame), isMoving(isMoving), isAttacking(isAttacking), flip(flip), 
       scale(scale), posX(posX), posY(posY), frameTime(frameTime), isAlive(isAlive), 
-      padding(padding), speed(speed) {}
+      padding(padding), attackCooldown(attackCooldown), speed(speed) {}
 
+    // Functions to set tint when character is hit 
+    void setRedTint() { SDL_SetTextureColorMod(texture.getSDLTexture(), 255, 0, 0); }
+    void setNoTint() { SDL_SetTextureColorMod(texture.getSDLTexture(), 255, 255, 255); }
 
     // Methods
     virtual void resetStates() {}
@@ -96,6 +98,8 @@ public:
     void setFrameTime(int frameTime) { this->frameTime = frameTime; }
     void setAlive(bool isAlive) { this->isAlive = isAlive; }
     void setIsRespawning(bool isRespawning) { this->isRespawning = isRespawning; }
+    void setAttackCooldown(int attackCooldown) { this->attackCooldown = attackCooldown; }
+    void setLastAttack(int lastAttack) { this->lastAttack = lastAttack; }
     void setSpeed(int speed) { this->speed = speed; }
     void setIdleRows(std::vector<int> rows) { idleRows = rows; }
     void setMoveRows(std::vector<int> rows) { moveRows = rows; }
@@ -121,6 +125,8 @@ public:
     int getFrameTime() const { return frameTime; }
     bool getAlive() const { return isAlive; }
     bool getRespawning() const { return isRespawning; }
+    int getAttackCooldown() const { return attackCooldown; }
+    int getLastAttack() const { return lastAttack; }
     int getSpeed() const { return speed; }
     const std::vector<int>& getIdleRows() const { return idleRows; }
     const std::vector<int>& getMoveRows() const { return moveRows; }
@@ -201,7 +207,7 @@ void Character::respawnTimer() {
     
     isRespawning = true;
     respawnStartTime = SDL_GetTicks();
-    respawnDelay = 5000 + (rand() % 5001);
+    respawnDelay = 3000 + (rand() % 3001);
 }
 
 void Character::checkRespawn() {

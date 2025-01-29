@@ -21,6 +21,9 @@ public:
     // Deallocate memory
     ~LTexture();
 
+    // Get texture
+    SDL_Texture *getSDLTexture() { return mTexture; }
+
     // Set game renderer
     void setRenderer(SDL_Renderer*& gameRenderer);
 

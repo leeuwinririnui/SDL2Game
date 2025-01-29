@@ -3,7 +3,7 @@
 #include "texture.h"
 #include "slime.h"
 
-#define MAXSLIMES 15
+#define MAXSLIMES 20
 #define SCREEN_WIDTH 1000
 #define SCREEN_HEIGHT 600
 #define TITLE "Slime Boy"
@@ -11,7 +11,6 @@
 #define PATHTOSLIME "./sprites/characters/slime.png"
 #define PLAYERSCALE 3
 #define SLIMESCALE 2
-#define ATTACKCOOLDOWN 400
 
 // Enumarator to track different game states
 enum GameState {
@@ -20,23 +19,32 @@ enum GameState {
     GameOver
 };
 
-// Function declarations
+// Enumarator to track directions
+enum Direction {
+    Down,
+    Right, 
+    Up, 
+    Left
+};
+
+// --------------------------- FUNCTION DECLARATIONS ---------------------------
 void handleEvents(SDL_Event &event, bool &running);
 bool playerColliding(Player *player,Slime *slime);
 bool slimeColliding(Player *player, Slime *slime);
 void attackSlime(Player *player, Slime *slime, int &playerPoints);
-void renderPoints(SDL_Renderer* renderer, int &playerPoints);
 void playerMovement(const Uint8 *keyStates, Player *player);
-void handlePlayerActions(const Uint8 *keyStates, Player *player, Uint32 currentTime, Uint32 &playerLastAttac);
-void playerAttack(const Uint8 *keyStates, Player *player, Uint32 currentTime,Uint32 &playerLastAttack);
+void handlePlayerActions(const Uint8 *keyStates, Player *player, Uint32 currentTime);
+void playerAttack(const Uint8 *keyStates, Player *player, Uint32 currentTime);
 void handleSlimeActions(std::vector<Slime*> &slimes, Player *player);
 bool isBlocked(int nextX, int nextY, Slime *currentSlime, const std::vector<Slime*> &slimes); 
 void slimeMovement(Slime *slime, Player *player, const std::vector<Slime*> &slimes);
 void slimeDeath(Slime *slime);
-void handleCollisions(Player *player, std::vector<Slime*> &slimes, int &playerPoints); 
-void slimeAttacks(Player *player, Slime *slime);
+void handleCollisions(Player *player, std::vector<Slime*> &slimes, int &playerPoints, Uint32 currentTime);
+void slimeAttacks(Player *player, Slime *slime, Uint32 currentTime);
 void updateFrames(Player *player, std::vector<Slime*> &slimes, Uint32 currentTime); 
 void renderCharacter(SDL_Renderer *renderer, Character *character, std::vector<SDL_Rect> clips);
+void renderPoints(SDL_Renderer* renderer, int &playerPoints);
+void renderHealth(SDL_Renderer* renderer, int playerHealth);
 void renderBoundingBox(SDL_Renderer *renderer, Character *character, SDL_Color color); 
 void startScreen(SDL_Renderer* renderer, bool &running);
 void endScreen(SDL_Renderer *renderer, bool &running, int playerPoints);
@@ -60,13 +68,14 @@ int main(int argc, char *argv[]) {
     std::string mapPath = "./alphamap.png";
     if (!map->loadFromFile(mapPath)) {
         std::cout << "Failed to load texture image " << mapPath << std::endl;
+        return -1;
     }
 
     std::vector<SDL_Rect> playerClips(6);
     Player *player = new Player(
         100, playerTexture, PATHTOPLAYER, playerClips, 48, 48, 0, 8, 0, 0, false,
         false, SDL_FLIP_NONE, PLAYERSCALE, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 
-        80, true, 24, 4
+        80, true, 24, 400, 4
     );
 
     int playerPoints = 0;
@@ -86,7 +95,7 @@ int main(int argc, char *argv[]) {
         int randomSpeed = (std::rand() % 3) + 1;
         Slime *slime = new Slime(
             20, slimeTexture, PATHTOSLIME, slimeClips[i], 32, 32, 0, 2, 0, 0,
-            false, false, SDL_FLIP_NONE, SLIMESCALE, 0, 0, 140, false, 5, randomSpeed
+            false, false, SDL_FLIP_NONE, SLIMESCALE, 0, 0, 140, false, 5, 400, randomSpeed
         );
         slimes.push_back(slime);
     }
@@ -108,10 +117,11 @@ int main(int argc, char *argv[]) {
         slime->loadMedia();
         slime->spriteClip();
     }
-
+    
     Uint32 playerLastAttack = 0;    
     GameState gameState = GameState::GameStart;
     bool running = true;
+    Uint32 currentTime;
 
     // Game event loop
     while (running) {
@@ -145,7 +155,7 @@ int main(int argc, char *argv[]) {
             SDL_Event event;
             handleEvents(event, running);
 
-            Uint32 currentTime = SDL_GetTicks();
+            currentTime = SDL_GetTicks();
             const Uint8 *keyStates = SDL_GetKeyboardState(NULL);
             player->setMoving(false);
 
@@ -154,12 +164,13 @@ int main(int argc, char *argv[]) {
                 slime->checkRespawn();
             }
 
-            handlePlayerActions(keyStates, player, currentTime, playerLastAttack);
+            // Handle movements and collisions
+            handlePlayerActions(keyStates, player, currentTime);
             handleSlimeActions(slimes, player);
-            handleCollisions(player, slimes, playerPoints);
-
+            handleCollisions(player, slimes, playerPoints, currentTime);
+            
             updateFrames(player, slimes, currentTime);
-
+            
             player->updateAnimation();
             player->spriteClip();
             for (auto &slime : slimes) {
@@ -167,11 +178,16 @@ int main(int argc, char *argv[]) {
                 slime->spriteClip();
             }
 
+            // Clear screen
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
             SDL_RenderClear(renderer);
 
             map->render(0, 0, nullptr, 1, SDL_FLIP_NONE);
 
+            // Player will flash red if attacked by slime
+            player->updateTint(currentTime);
+
+            // Render characters
             renderCharacter(renderer, player, playerClips);
             renderBoundingBox(renderer, player, SDL_Color{ 255, 0, 0, 255 });
 
@@ -180,11 +196,16 @@ int main(int argc, char *argv[]) {
                 renderBoundingBox(renderer, slime, SDL_Color{ 0, 0, 255, 255 });
             }
 
+            // Render points and health
             renderPoints(renderer, playerPoints);
+            renderHealth(renderer, player->getHealth());
+
             SDL_RenderPresent(renderer);
             SDL_Delay(16);
 
+            // End game if player death animation has completed
             if (!player->getAlive() && player->getCurrentFrame() == 2) {
+                player->setFlashing(false);
                 std::cout << "Game Over!" << std::endl;
                 gameState = GameState::GameOver;  // Transition to Game Over
             }
@@ -210,11 +231,11 @@ void handleEvents(SDL_Event &event, bool &running) {
     }
 }
 
-void handlePlayerActions(const Uint8 *keyStates, Player *player, Uint32 currentTime, Uint32 &playerLastAttack) {
+void handlePlayerActions(const Uint8 *keyStates, Player *player, Uint32 currentTime) {
     if (!player->getAlive()) return;
 
     playerMovement(keyStates, player);
-    playerAttack(keyStates, player, currentTime, playerLastAttack);
+    playerAttack(keyStates, player, currentTime);
 }
 
 void playerMovement(const Uint8 *keyStates, Player *player) {
@@ -230,7 +251,7 @@ void playerMovement(const Uint8 *keyStates, Player *player) {
 
     if (!player->getAttacking()) {
         if (keyStates[SDL_SCANCODE_UP] && !keyStates[SDL_SCANCODE_DOWN]) {
-            player->setDirection(2); // Up
+            player->setDirection(Up); 
             if (posY > minY) {
                 player->setPosY(posY - speed);
                 isMoving = true;
@@ -238,7 +259,7 @@ void playerMovement(const Uint8 *keyStates, Player *player) {
         }
 
         if (keyStates[SDL_SCANCODE_DOWN] && !keyStates[SDL_SCANCODE_UP]) {
-            player->setDirection(0); // Down
+            player->setDirection(Down); 
             if (posY < maxY) {
                 player->setPosY(posY + speed);
                 isMoving = true;
@@ -246,7 +267,7 @@ void playerMovement(const Uint8 *keyStates, Player *player) {
         }
 
         if (keyStates[SDL_SCANCODE_LEFT] && !keyStates[SDL_SCANCODE_RIGHT]) {
-            player->setDirection(3); // Left
+            player->setDirection(Left); 
             if (posX > minX) {
                 player->setPosX(posX - speed);
                 isMoving = true;
@@ -254,7 +275,7 @@ void playerMovement(const Uint8 *keyStates, Player *player) {
         }
 
         if (keyStates[SDL_SCANCODE_RIGHT] && !keyStates[SDL_SCANCODE_LEFT]) {
-            player->setDirection(1); // Right
+            player->setDirection(Right); 
             if (posX < maxX) {
                 player->setPosX(posX + speed);
                 isMoving = true;
@@ -265,13 +286,48 @@ void playerMovement(const Uint8 *keyStates, Player *player) {
     player->setMoving(isMoving);
 }
 
-void playerAttack(const Uint8 *keyStates, Player *player, Uint32 currentTime, Uint32 &playerLastAttack) {
-    if (!player->getAttacking() && keyStates[SDL_SCANCODE_SPACE] && currentTime - playerLastAttack >= ATTACKCOOLDOWN) {
+void playerAttack(const Uint8 *keyStates, Player *player, Uint32 currentTime) {
+    if (!player->getAttacking() && keyStates[SDL_SCANCODE_SPACE] && currentTime - player->getLastAttack() >= player->getAttackCooldown()) {
+        int playerDirection = player->getDirection();
+        int attackDistance = 20;
+        int posX = player->getPosX();
+        int posY = player->getPosY();
+        int minX = player->getMinX();
+        int maxX = player->getMaxX();
+        int minY = player->getMinY();
+        int maxY = player->getMaxY();
+
+        // Update position based on direction (if attack involves movement)
+        switch (playerDirection) {
+            case Down: 
+                if (posY + attackDistance <= maxY) {
+                    player->setPosY(posY + attackDistance);
+                }
+                break;
+            case Right: 
+                if (posX + attackDistance <= maxX) {
+                    player->setPosX(posX + attackDistance);
+                }
+                break;
+            case Up: 
+                if (posY - attackDistance >= minY) {
+                    player->setPosY(posY - attackDistance);
+                }
+                break;
+            case Left: 
+                if (posX - attackDistance >= minX) {
+                    player->setPosX(posX - attackDistance);
+                }
+                break;
+        }
+
+        // Set attack state
         player->setAttacking(true);
-        player->setCurrentFrame(0); 
-        playerLastAttack = currentTime;
+        player->setCurrentFrame(0);
+        player->setLastAttack(currentTime);
     }
 
+    // End attack when animation completes
     if (player->getAttacking() && player->getCurrentFrame() == 3) {
         player->setAttacking(false);
         player->setCurrentFrame(0);
@@ -323,13 +379,13 @@ void slimeMovement(Slime *slime, Player *player, const std::vector<Slime*> &slim
         int moveY = std::min(slimeSpeed, deltaY); // Move only as much as needed
         if (!isBlocked(slimePosX, slimePosY + moveY, slime, slimes)) {
             slime->setPosY(slimePosY + moveY);
-            slime->setDirection(0); // Down
+            slime->setDirection(Down); 
         }
     } else if (slimeCenter.y > playerCenter.y) {
         int moveY = std::min(slimeSpeed, -deltaY); 
         if (!isBlocked(slimePosX, slimePosY - moveY, slime, slimes)) {
             slime->setPosY(slimePosY - moveY);
-            slime->setDirection(2); // Up
+            slime->setDirection(Up); 
         }
     }
 
@@ -337,23 +393,13 @@ void slimeMovement(Slime *slime, Player *player, const std::vector<Slime*> &slim
         int moveX = std::min(slimeSpeed, deltaX);
         if (!isBlocked(slimePosX + moveX, slimePosY, slime, slimes)) {
             slime->setPosX(slimePosX + slimeSpeed);
-            slime->setDirection(1); // Right
+            slime->setDirection(Right); 
         }
     } else if (slimeCenter.x > playerCenter.x) {
         int moveX = std::min(slimeSpeed, -deltaX);
         if (!isBlocked(slimePosX - moveX, slimePosY, slime, slimes)) {
             slime->setPosX(slimePosX - slimeSpeed);
-            slime->setDirection(3); // Left
-        }
-    }
-
-    if (slime->getAlive()) {
-        if (std::abs(slimeCenter.x - playerCenter.x) <= 10 && std::abs(slimeCenter.y - playerCenter.y) <= 10) {
-            player->setHealth(player->getHealth() - 20);
-            if (player->getHealth() <= 0) {
-                player->setAlive(false);
-                player->setCurrentFrame(0);
-            }
+            slime->setDirection(Left); 
         }
     }
 }
@@ -363,20 +409,20 @@ void slimeDeath(Slime *slime) {
 
     // Move the slime off-screen when the death animation is finished
     if (slime->getCurrentFrame() == 4) {
-        slime->setPosX(-1000);
+        slime->setPosX(-1000); 
     }
 }
 
-void handleCollisions(Player *player, std::vector<Slime*> &slimes, int &playerPoints) {
+void handleCollisions(Player *player, std::vector<Slime*> &slimes, int &playerPoints, Uint32 currentTime) {
     for (auto &slime : slimes) {
         if (playerColliding(player, slime)) {
             std::cout << "Player Colliding" << std::endl;
             attackSlime(player, slime, playerPoints);
         } 
 
-        if (slimeColliding(player, slime)) {
+        if (slime->getAlive() && slimeColliding(player, slime)) {
             std::cout << "Slime Colliding" << std::endl;
-            slimeAttacks(player, slime);
+            slimeAttacks(player, slime, currentTime);
         } else if (slime->getAttacking()) {
             slime->setAttacking(false);
             slime->setSpeed(2);
@@ -385,16 +431,30 @@ void handleCollisions(Player *player, std::vector<Slime*> &slimes, int &playerPo
     }
 }
 
-void slimeAttacks(Player *player, Slime *slime) {
+void slimeAttacks(Player *player, Slime *slime, Uint32 currentTime) {
     if (!slime->getAttacking()) {
         slime->setAttacking(true);
         slime->setCurrentFrame(0);
         slime->setSpeed(4);
-        slime->setFrameTime(80);
     } else if (slime->getAttacking() && slime->getCurrentFrame() == 0) {
         slime->setAttacking(false);
         slime->setSpeed(2);
-        slime->setFrameTime(120);
+    }
+
+    SDL_Point playerCenter = player->getBoundingBoxCenter();
+    SDL_Point slimeCenter = slime->getBoundingBoxCenter();
+
+    if (currentTime - slime->getLastAttack() >= slime->getAttackCooldown()  && player->getAlive()) {
+        if (std::abs(slimeCenter.x - playerCenter.x) <= 10 && std::abs(slimeCenter.y - playerCenter.y) <= 10) {
+            player->setFlashing(true);
+            player->setHealth(player->getHealth() - 20);
+            slime->setLastAttack(currentTime);
+
+            if (player->getHealth() <= 0) {
+                player->setAlive(false);
+                player->setCurrentFrame(0);
+            }
+        }
     }
 }
 
@@ -403,10 +463,10 @@ bool playerColliding(Player *player, Slime *slime) {
     SDL_Rect playerBox = player->getBoundingBox();
     SDL_Rect slimeBox = slime->getBoundingBox();
 
-    if (playerDirection == 0 && slimeBox.y + slimeBox.h <= playerBox.y + playerBox.h / 2) return false;
-    if (playerDirection == 1 && slimeBox.x + slimeBox.w <= playerBox.x + playerBox.w / 2) return false;
-    if (playerDirection == 2 && slimeBox.y >= playerBox.y + playerBox.h / 2) return false;
-    if (playerDirection == 3 && slimeBox.x >= playerBox.x + playerBox.w / 2) return false;
+    if (playerDirection == Down && slimeBox.y + slimeBox.h <= playerBox.y + playerBox.h / 2) return false;
+    if (playerDirection == Right && slimeBox.x + slimeBox.w <= playerBox.x + playerBox.w / 2) return false;
+    if (playerDirection == Up && slimeBox.y >= playerBox.y + playerBox.h / 2) return false;
+    if (playerDirection == Left && slimeBox.x >= playerBox.x + playerBox.w / 2) return false;
 
     return playerBox.x < slimeBox.x + slimeBox.w &&
            playerBox.x + playerBox.w > slimeBox.x &&
@@ -476,7 +536,7 @@ void renderBoundingBox(SDL_Renderer *renderer, Character *character, SDL_Color c
 }
 
 void renderPoints(SDL_Renderer* renderer, int &playerPoints) {
-    TTF_Font* font = TTF_OpenFont("./ThaleahFat.ttf", 28);
+    TTF_Font* font = TTF_OpenFont("./ThaleahFat.ttf", 32);
     if (!font) {
         std::cout << "Failed to load font! SDL_ttf Error: " << TTF_GetError() << std::endl;
         return;
@@ -489,6 +549,30 @@ void renderPoints(SDL_Renderer* renderer, int &playerPoints) {
 
     // Get text dimensions
     SDL_Rect textRect = { 10, 10, textSurface->w, textSurface->h }; // Position at the top left corner
+
+    // Render the text
+    SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
+
+    // Free resources
+    SDL_FreeSurface(textSurface);
+    SDL_DestroyTexture(textTexture);
+    TTF_CloseFont(font);
+}
+
+void renderHealth(SDL_Renderer* renderer, int playerHealth) {
+    TTF_Font* font = TTF_OpenFont("./ThaleahFat.ttf", 32);
+    if (!font) {
+        std::cout << "Failed to load font! SDL_ttf Error: " << TTF_GetError() << std::endl;
+        return;
+    }
+
+    // Convert score to text
+    std::string scoreText = "Health: " + std::to_string(playerHealth);
+    SDL_Surface* textSurface = TTF_RenderText_Solid(font, scoreText.c_str(), { 255, 255, 255 });
+    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+
+    // Get text dimensions
+    SDL_Rect textRect = { 1000 - textSurface->w - 10, 10, textSurface->w, textSurface->h }; // Position at the top right corner
 
     // Render the text
     SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
