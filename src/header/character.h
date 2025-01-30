@@ -3,6 +3,14 @@
 
 #include "texture.h"
 
+// Enumarator to track directions
+enum Direction {
+    Down,
+    Right, 
+    Up, 
+    Left
+};
+
 class Character {
 protected:
     int health;
@@ -19,6 +27,7 @@ protected:
     // Boundaries
     int minX, maxX, minY, maxY;
 
+    // Timing variables
     Uint32 lastFrame = 0, respawnStartTime;
     int respawnDelay;
 
@@ -28,17 +37,13 @@ protected:
 
 public:
     LTexture &texture;
+
     // Constructor
     Character(int health, LTexture &texture, const std::string &path, std::vector<SDL_Rect> &clips, 
             int frameWidth, int frameHeight, int row, int offset, int direction, int currentFrame,
             bool isMoving, bool isAttacking, SDL_RendererFlip flip, int scale, int posX, int posY,
-            int frameTime, bool isAlive, int padding, int attackCooldown, int speed) 
-    : health(health), texture(texture), path(path), clips(clips), frameWidth(frameWidth), 
-      frameHeight(frameHeight), row(row), offset(offset), direction(direction), 
-      currentFrame(currentFrame), isMoving(isMoving), isAttacking(isAttacking), flip(flip), 
-      scale(scale), posX(posX), posY(posY), frameTime(frameTime), isAlive(isAlive), 
-      padding(padding), attackCooldown(attackCooldown), speed(speed) {}
-
+            int frameTime, bool isAlive, int padding, int attackCooldown, int speed);
+            
     // Functions to set tint when character is hit 
     void setRedTint() { SDL_SetTextureColorMod(texture.getSDLTexture(), 255, 0, 0); }
     void setNoTint() { SDL_SetTextureColorMod(texture.getSDLTexture(), 255, 255, 255); }
@@ -134,7 +139,18 @@ public:
     int getDeathRow() const { return deathRow; }
 };
 
-// Method implementations
+// Constructor
+Character::Character(int health, LTexture &texture, const std::string &path, std::vector<SDL_Rect> &clips, 
+        int frameWidth, int frameHeight, int row, int offset, int direction, int currentFrame,
+        bool isMoving, bool isAttacking, SDL_RendererFlip flip, int scale, int posX, int posY,
+        int frameTime, bool isAlive, int padding, int attackCooldown, int speed) 
+    : health(health), texture(texture), path(path), clips(clips), frameWidth(frameWidth), 
+    frameHeight(frameHeight), row(row), offset(offset), direction(direction), 
+    currentFrame(currentFrame), isMoving(isMoving), isAttacking(isAttacking), flip(flip), 
+    scale(scale), posX(posX), posY(posY), frameTime(frameTime), isAlive(isAlive), 
+    padding(padding), attackCooldown(attackCooldown), speed(speed) {}
+
+// Get bounding box of character
 SDL_Rect Character::getBoundingBox() const {
         SDL_Rect boundingBox = {
             posX + padding,
@@ -145,6 +161,7 @@ SDL_Rect Character::getBoundingBox() const {
         return boundingBox;
     }
 
+// Get center of bounding box
 SDL_Point Character::getBoundingBoxCenter() {
     SDL_Rect boundingBox = getBoundingBox();
     SDL_Point center;
@@ -153,6 +170,7 @@ SDL_Point Character::getBoundingBoxCenter() {
     return center;
 }
 
+// Load character's texture from file
 bool Character::loadMedia() {
     if (!texture.loadFromFile(path.c_str())) {
         std::cout << "Failed to load texture image " << path.c_str() << std::endl;
@@ -161,6 +179,7 @@ bool Character::loadMedia() {
     return true;
 }
 
+// Set up sprite clips for animation
 void Character::spriteClip() {
     int xCordinate = 0;
     int yCordinate = offset + row * frameHeight;
@@ -174,8 +193,9 @@ void Character::spriteClip() {
     }
 }
 
+// Update animation based on the character's state
 void Character::updateAnimation() {
-    if (direction == 3) {
+    if (direction == Left) {
         flip = SDL_FLIP_HORIZONTAL;
     } else {
         flip = SDL_FLIP_NONE;
@@ -193,6 +213,7 @@ void Character::updateAnimation() {
     }
 }
 
+// Spawn character at a specific position
 void Character::spawn(int spawnX, int spawnY) {
     posX = spawnX;
     posY = spawnY;
@@ -202,6 +223,7 @@ void Character::spawn(int spawnX, int spawnY) {
     updateAnimation();
 }
 
+// Start respawn timer
 void Character::respawnTimer() {
     if (isAlive || isRespawning) return;
     
@@ -210,6 +232,7 @@ void Character::respawnTimer() {
     respawnDelay = 3000 + (rand() % 3001);
 }
 
+// Check if character should respawn
 void Character::checkRespawn() {
     if (!isAlive && isRespawning) {
         Uint32 currentTime = SDL_GetTicks();
@@ -222,6 +245,7 @@ void Character::checkRespawn() {
     }
 }
 
+// Set random spawn points for the character
 void Character::setRandomSpawnPoints() {
     int randomX;
     int randomY;
@@ -230,19 +254,19 @@ void Character::setRandomSpawnPoints() {
     int side = rand() % 4;
 
     switch (side) {
-        case 0: // Bottom
+        case Down: // Bottom
             randomX = rand() % 1000;
             randomY = rand() % 600 + 700;
             break;
-        case 1: // Right
+        case Right: // Right
             randomX = rand() % 500 + 1000;
             randomY = rand() % 600;
             break;
-        case 2: // Top
+        case Up: // Top
             randomX = rand() % 1000;
             randomY = rand() % 500 + -800;
             break;
-        case 3: // Left
+        case Left: // Left
             randomX = rand() % 500 + -1000;
             randomY = rand() % 600;
             break;

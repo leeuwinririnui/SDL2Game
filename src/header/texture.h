@@ -41,6 +41,7 @@ public:
     int getHeight();
 };
 
+// Constructor
 LTexture::LTexture(SDL_Renderer*& gameRenderer) {
     this->gameRenderer = gameRenderer;
     this->mTexture = nullptr;
@@ -48,19 +49,25 @@ LTexture::LTexture(SDL_Renderer*& gameRenderer) {
     this->mHeight = 0;
 }
 
+// Destructor implementation
 LTexture::~LTexture() {
     free();
 }
 
+// Set renderer for texture
 void LTexture::setRenderer(SDL_Renderer*& gameRenderer) {
     this->gameRenderer = gameRenderer;
 }
 
+// Load image from a file and create a texture
 bool LTexture::loadFromFile(std::string path) {
+    // Free existing texture
     free();
 
+    // Temporary pointer for new texture
     SDL_Texture* newTexture = nullptr;
 
+    // Load image into surface
     SDL_Surface* loadedSurface = IMG_Load(path.c_str());
     if (loadedSurface == NULL) {
         std::cout << "Unable to load image " << path.c_str() << "! SDL image Error: " << IMG_GetError() 
@@ -68,6 +75,7 @@ bool LTexture::loadFromFile(std::string path) {
         return false;
     }
 
+    // Set color key for transparency (e.g., remove cyan background)
     SDL_SetColorKey(loadedSurface, SDL_TRUE, SDL_MapRGB(loadedSurface->format,0,0xFF,0xFF));
 
     // Create texture from surface pixels
@@ -80,15 +88,19 @@ bool LTexture::loadFromFile(std::string path) {
         return false;
     }
 
+    // Store dimensions of loaded image
     mWidth = loadedSurface->w;
     mHeight = loadedSurface->h;
 
+    // Free surface as it is no longer needed
     SDL_FreeSurface(loadedSurface);
 
+    // Assign new texture to member variable
     mTexture = newTexture;
     return mTexture != nullptr;
 }
 
+// Free texture and reset dimensions
 void LTexture::free() {
     if (mTexture) {
         SDL_DestroyTexture(mTexture);
@@ -98,6 +110,7 @@ void LTexture::free() {
     }
 }
 
+// Render texture at specified position with optional parameters
 void LTexture::render(int x, int y, SDL_Rect* clip, int scale,SDL_RendererFlip flip) {
     // Set rendering space and render to screen
     SDL_Rect renderQuad = { x, y, mWidth * scale, mHeight * scale };

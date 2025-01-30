@@ -13,8 +13,10 @@ public:
     // Use constructor from Character class
     using Character::Character;
 
+    // Override resetStates method
     void resetStates() override;
 
+    // Methods to handle flashing effect
     void setFlashing(bool isFlashing);
     void updateTint(Uint32 currentTime);
 
@@ -22,11 +24,13 @@ public:
     bool getFlashing() const { return isFlashing; }
 };
 
+// Set flashing state and record timw when flashing starts
 void Player::setFlashing(bool isFlashing) { 
         this->isFlashing = isFlashing; 
         lastFlashTime = SDL_GetTicks();
     }
 
+// Update tint based on flashing state and elapsed time
 void Player::updateTint(Uint32 currentTime) {
     if (currentTime - lastFlashTime >= flashCooldown) {
         isFlashing = false;
@@ -39,6 +43,7 @@ void Player::updateTint(Uint32 currentTime) {
     }
 }
 
+// Reset player's states to default values
 void Player::resetStates() {
     isAlive = true;
     isRespawning = false;
