@@ -2,9 +2,10 @@
 #include "player.h"
 #include "texture.h"
 #include "slime.h"
+#include "health.h"
 
 // Constants for game configuration
-#define MAXSLIMES 20
+#define MAXSLIMES 15
 #define SCREEN_WIDTH 1000
 #define SCREEN_HEIGHT 600
 #define TITLE "Slime Boy"
@@ -41,6 +42,9 @@ void renderHealth(SDL_Renderer* renderer, int playerHealth);
 void renderBoundingBox(SDL_Renderer *renderer, Character *character, SDL_Color color); 
 void startScreen(SDL_Renderer* renderer, bool &running);
 void endScreen(SDL_Renderer *renderer, bool &running, int playerPoints);
+void spawnHealthPotion(Player *player, std::vector<Slime*> &slimes, HealthPotion *healthPotion, int &healthPotionHolder);
+void playerUseHealthPotion(HealthPotion *healthPotion, Player *player, int &healthPotionHolder);
+void setHealthPosition(Potion *healthPotion, std::vector<Slime*> &slimes, int healthPotionHolder);
 
 int main(int argc, char *argv[]) {
     SDL_Window* gameWindow = nullptr;
@@ -59,6 +63,13 @@ int main(int argc, char *argv[]) {
     LTexture *map = new LTexture(renderer);
     LTexture playerTexture(renderer);
     LTexture slimeTexture(renderer);
+    LTexture healthTexture(renderer);
+
+    // Potions setup
+    std::string healthPath = "./sprites/potions/Potion 3.png";
+    HealthPotion *healthPotion = new HealthPotion(healthTexture, healthPath, "Health Potion", 20);
+    healthPotion->setSize(32, 32);
+    healthPotion->loadMedia();
 
     // Map setup
     std::string mapPath = "./map.png";
@@ -72,7 +83,7 @@ int main(int argc, char *argv[]) {
     Player *player = new Player(
         100, playerTexture, PATHTOPLAYER, playerClips, 48, 48, 0, 8, 0, 0, false,
         false, SDL_FLIP_NONE, PLAYERSCALE, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 
-        80, true, 24, 400, 4
+        80, true, 24, 400, 5
     );
 
     int playerPoints = 0;
@@ -88,9 +99,9 @@ int main(int argc, char *argv[]) {
     std::vector<std::vector<SDL_Rect>> slimeClips(MAXSLIMES, std::vector<SDL_Rect>(7));
 
     for (int i = 0; i < MAXSLIMES; i++) {
-        int randomSpeed = (std::rand() % 3) + 1;
+        int randomSpeed = (std::rand() % 3) + 2;
         Slime *slime = new Slime(
-            20, slimeTexture, PATHTOSLIME, slimeClips[i], 32, 32, 0, 2, 0, 0,
+            20, slimeTexture, PATHTOSLIME, slimeClips[i], 32, 32, 0, 2, 0, 4,
             false, false, SDL_FLIP_NONE, SLIMESCALE, 0, 0, 140, false, 5, 400, randomSpeed
         );
         slimes.push_back(slime);
@@ -113,11 +124,13 @@ int main(int argc, char *argv[]) {
         slime->loadMedia();
         slime->spriteClip();
     }
-    
-    Uint32 playerLastAttack = 0;    
+     
     GameState gameState = GameState::GameStart;
     bool running = true;
     Uint32 currentTime;
+
+    // Index of health potion holder
+    int healthPotionHolder = -1;
 
     // Game event loop
     while (running) {
@@ -138,9 +151,12 @@ int main(int argc, char *argv[]) {
                 break;  // Exit the loop if user quits
             }
 
+            // Reset states
             player->resetStates();
             for (auto &slime : slimes) slime->resetStates();
+            healthPotion->resetStates();
             
+            healthPotionHolder = -1;
             playerPoints = 0;
 
             gameState = GameState::Playing;  // Go back to GameStart after GameOver
@@ -165,6 +181,10 @@ int main(int argc, char *argv[]) {
             if (player->getAlive()) handlePlayerActions(keyStates, player, currentTime);
             handleSlimeActions(slimes, player);
             handleCollisions(player, slimes, playerPoints, currentTime);
+
+            // Handle potions
+            spawnHealthPotion(player, slimes, healthPotion, healthPotionHolder);
+            playerUseHealthPotion(healthPotion, player, healthPotionHolder);
             
             updateFrames(player, slimes, currentTime);
             
@@ -179,18 +199,25 @@ int main(int argc, char *argv[]) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
             SDL_RenderClear(renderer);
 
+            // Render map
             map->render(0, 0, nullptr, 1, SDL_FLIP_NONE);
 
-            // Player will flash red if attacked by slime
+            // Set health potion position and render
+            setHealthPosition(healthPotion, slimes, healthPotionHolder);
+            if (healthPotion->getIsVisible() ) {
+                healthPotion->texture.render(healthPotion->getX(), healthPotion->getY(), nullptr, 2, SDL_FLIP_NONE);
+            }
+
+            // Player will flash red if attacked by slime or blue if recovering health 
             player->updateTint(currentTime);
 
-            // Render characters
+            // Render player and slimes
             renderCharacter(renderer, player, playerClips);
-            renderBoundingBox(renderer, player, SDL_Color{ 255, 0, 0, 255 });
+            // renderBoundingBox(renderer, player, SDL_Color{ 255, 0, 0, 255 });
 
             for (auto const &slime : slimes) {
                 renderCharacter(renderer, slime, slime->getClips());
-                renderBoundingBox(renderer, slime, SDL_Color{ 0, 0, 255, 255 });
+                // renderBoundingBox(renderer, slime, SDL_Color{ 0, 0, 255, 255 });
             }
 
             // Render points and health
@@ -202,7 +229,6 @@ int main(int argc, char *argv[]) {
 
             // End game if player death animation has completed
             if (!player->getAlive() && player->getCurrentFrame() == 2) {
-                player->setFlashing(false);
                 std::cout << "Game Over!" << std::endl;
                 gameState = GameState::GameOver;  // Transition to Game Over
             }
@@ -362,6 +388,7 @@ bool isBlocked(int nextX, int nextY, Slime *currentSlime, const std::vector<Slim
     return false;
 }
 
+
 // Handle slime movement towards the player
 void slimeMovement(Slime *slime, Player *player, const std::vector<Slime*> &slimes) {
     slime->setMoving(true);
@@ -378,13 +405,13 @@ void slimeMovement(Slime *slime, Player *player, const std::vector<Slime*> &slim
     int deltaY = playerCenter.y - slimeCenter.y;
     
     // Move the slime towards the player
-    if (slimeCenter.y < playerCenter.y) {
+    if (slimeCenter.y < playerCenter.y - 10) {
         int moveY = std::min(slimeSpeed, deltaY); // Move down
         if (!isBlocked(slimePosX, slimePosY + moveY, slime, slimes)) {
             slime->setPosY(slimePosY + moveY);
             slime->setDirection(Down); 
         }
-    } else if (slimeCenter.y > playerCenter.y) {
+    } else if (slimeCenter.y > playerCenter.y + 10) {
         int moveY = std::min(slimeSpeed, -deltaY); // Move up
         if (!isBlocked(slimePosX, slimePosY - moveY, slime, slimes)) {
             slime->setPosY(slimePosY - moveY);
@@ -392,13 +419,13 @@ void slimeMovement(Slime *slime, Player *player, const std::vector<Slime*> &slim
         }
     }
 
-    if (slimeCenter.x < playerCenter.x) {
+    if (slimeCenter.x < playerCenter.x - 10) {
         int moveX = std::min(slimeSpeed, deltaX); // Move right
         if (!isBlocked(slimePosX + moveX, slimePosY, slime, slimes)) {
             slime->setPosX(slimePosX + slimeSpeed);
             slime->setDirection(Right); 
         }
-    } else if (slimeCenter.x > playerCenter.x) {
+    } else if (slimeCenter.x > playerCenter.x + 10) {
         int moveX = std::min(slimeSpeed, -deltaX); // Move left
         if (!isBlocked(slimePosX - moveX, slimePosY, slime, slimes)) {
             slime->setPosX(slimePosX - slimeSpeed);
@@ -441,10 +468,10 @@ void slimeAttacks(Player *player, Slime *slime, Uint32 currentTime) {
     if (!slime->getAttacking()) {
         slime->setAttacking(true);
         slime->setCurrentFrame(0);
-        slime->setSpeed(4);
+        slime->setSpeed(slime->getSpeed() + 1);
     } else if (slime->getAttacking() && slime->getCurrentFrame() == 0) {
         slime->setAttacking(false);
-        slime->setSpeed(2);
+        slime->setSpeed(slime->getSpeed() - 1);
     }
 
     SDL_Point playerCenter = player->getBoundingBoxCenter();
@@ -452,7 +479,7 @@ void slimeAttacks(Player *player, Slime *slime, Uint32 currentTime) {
 
     //  Check if slime can attack player
     if (currentTime - slime->getLastAttack() >= slime->getAttackCooldown()  && player->getAlive()) {
-        if (std::abs(slimeCenter.x - playerCenter.x) <= 10 && std::abs(slimeCenter.y - playerCenter.y) <= 10) {
+        if (std::abs(slimeCenter.x - playerCenter.x) <= 30 && std::abs(slimeCenter.y - playerCenter.y) <= 30) {
             player->setFlashing(true);
             player->setHealth(player->getHealth() - 20); // Reduce player health
             slime->setLastAttack(currentTime);
@@ -692,4 +719,46 @@ void endScreen(SDL_Renderer *renderer, bool &running, int playerPoints) {
     // Clean up resources
     SDL_DestroyTexture(textTexture);
     TTF_CloseFont(font);
+}
+
+// Spawn heath potion with a 1 in 10 chance
+void spawnHealthPotion(Player *player, std::vector<Slime*> &slimes, HealthPotion *healthPotion, int &healthPotionHolder) {
+    if (healthPotionHolder != -1) return;
+
+    // 1 in 10 chance to spawn potion
+    if (rand() % 10 != 0) return;
+
+    // Give to first alive
+    for (int i = 0; i < slimes.size(); i++) {
+        if (slimes[i]->getAlive()) {
+            healthPotionHolder = i;
+            break;
+        }
+    }
+}
+
+// Handle player colliding with healh potion
+void playerUseHealthPotion(HealthPotion *healthPotion, Player *player, int &healthPotionHolder) {
+    if (!healthPotion->getIsVisible()) return;
+
+    SDL_Point potionCenter = healthPotion->getBoundingBoxCenter();
+    SDL_Point playerCenter = player->getBoundingBoxCenter();
+    
+    if (std::abs(potionCenter.x - playerCenter.x) <= 32 && std::abs(potionCenter.y - playerCenter.y) <= 32) {
+        player->setRecovering(true);
+        healthPotion->applyEffect(player);
+        healthPotion->setIsVisible(false);
+        healthPotionHolder = -1;
+    }
+}
+
+// Set x and y position of health potion
+void setHealthPosition(Potion *healthPotion, std::vector<Slime*> &slimes, int healthPotionHolder) {
+    if (healthPotionHolder != -1 && !slimes[healthPotionHolder]->getAlive() && !slimes[healthPotionHolder]->getRespawning()) {
+        int posX = slimes[healthPotionHolder]->getPosX();
+        int posY = slimes[healthPotionHolder]->getPosY();
+
+        healthPotion->setPosition(posX, posY);
+        healthPotion->setIsVisible(true);
+    }
 }

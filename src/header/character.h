@@ -40,12 +40,13 @@ public:
 
     // Constructor
     Character(int health, LTexture &texture, const std::string &path, std::vector<SDL_Rect> &clips, 
-            int frameWidth, int frameHeight, int row, int offset, int direction, int currentFrame,
-            bool isMoving, bool isAttacking, SDL_RendererFlip flip, int scale, int posX, int posY,
-            int frameTime, bool isAlive, int padding, int attackCooldown, int speed);
+        int frameWidth, int frameHeight, int row, int offset, int direction, int currentFrame,
+        bool isMoving, bool isAttacking, SDL_RendererFlip flip, int scale, int posX, int posY,
+        int frameTime, bool isAlive, int padding, int attackCooldown, int speed);
             
-    // Functions to set tint when character is hit 
+    // Functions to set color tint  
     void setRedTint() { SDL_SetTextureColorMod(texture.getSDLTexture(), 255, 0, 0); }
+    void setBlueTint() { SDL_SetTextureColorMod(texture.getSDLTexture(), 0, 0, 255); }
     void setNoTint() { SDL_SetTextureColorMod(texture.getSDLTexture(), 255, 255, 255); }
 
     // Methods
@@ -141,9 +142,9 @@ public:
 
 // Constructor
 Character::Character(int health, LTexture &texture, const std::string &path, std::vector<SDL_Rect> &clips, 
-        int frameWidth, int frameHeight, int row, int offset, int direction, int currentFrame,
-        bool isMoving, bool isAttacking, SDL_RendererFlip flip, int scale, int posX, int posY,
-        int frameTime, bool isAlive, int padding, int attackCooldown, int speed) 
+    int frameWidth, int frameHeight, int row, int offset, int direction, int currentFrame,
+    bool isMoving, bool isAttacking, SDL_RendererFlip flip, int scale, int posX, int posY,
+    int frameTime, bool isAlive, int padding, int attackCooldown, int speed) 
     : health(health), texture(texture), path(path), clips(clips), frameWidth(frameWidth), 
     frameHeight(frameHeight), row(row), offset(offset), direction(direction), 
     currentFrame(currentFrame), isMoving(isMoving), isAttacking(isAttacking), flip(flip), 
@@ -219,6 +220,7 @@ void Character::spawn(int spawnX, int spawnY) {
     posY = spawnY;
     isMoving = false;
     isAttacking = false;
+    isAlive = true;
     currentFrame = 0;
     updateAnimation();
 }
@@ -229,7 +231,7 @@ void Character::respawnTimer() {
     
     isRespawning = true;
     respawnStartTime = SDL_GetTicks();
-    respawnDelay = 3000 + (rand() % 3001);
+    respawnDelay = 2500;
 }
 
 // Check if character should respawn

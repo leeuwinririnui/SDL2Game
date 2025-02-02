@@ -14,13 +14,14 @@ public:
 
 // Reset slimes states to default value
 void Slime::resetStates() {
-    isAlive = true;
+    lastAttack = 0;
+    isAlive = false;
     isRespawning = false;
     isMoving = false;
     isAttacking = false;
-    currentFrame = 0;
+    currentFrame = 4; // TEMP FIX - DEATH ANIMATION PLAYS AT START OF EACH GAME
     direction = 0;
-    speed = (std::rand() % 3) + 1;
+    speed = (std::rand() % 2) + 2;
     flip = SDL_FLIP_NONE;
     row = idleRows[direction];
     setRandomSpawnPoints();

@@ -25,7 +25,7 @@ public:
     SDL_Texture *getSDLTexture() { return mTexture; }
 
     // Set game renderer
-    void setRenderer(SDL_Renderer*& gameRenderer);
+    void setRenderer(SDL_Renderer *&gameRenderer);
 
     // Loads image 
     bool loadFromFile(std::string path);
@@ -34,7 +34,7 @@ public:
     void free();
 
     // Renders texture at given point
-    void render(int x, int y, SDL_Rect* clip = nullptr, int scale = 1, SDL_RendererFlip flip = SDL_FLIP_NONE);
+    void render(int x, int y, SDL_Rect *clip = nullptr, int scale = 1, SDL_RendererFlip flip = SDL_FLIP_NONE);
 
     // Get image dimensions
     int getWidth();
@@ -111,7 +111,7 @@ void LTexture::free() {
 }
 
 // Render texture at specified position with optional parameters
-void LTexture::render(int x, int y, SDL_Rect* clip, int scale,SDL_RendererFlip flip) {
+void LTexture::render(int x, int y, SDL_Rect *clip, int scale, SDL_RendererFlip flip) {
     // Set rendering space and render to screen
     SDL_Rect renderQuad = { x, y, mWidth * scale, mHeight * scale };
 
