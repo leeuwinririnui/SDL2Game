@@ -1,3 +1,6 @@
+#ifndef INIT_H
+#define INIT_H
+
 #include "includes.h"
 
 // Initialize SDL and create window
@@ -59,3 +62,5 @@ void close(SDL_Texture*& gameTexture, SDL_Renderer*& gameRenderer, SDL_Window*& 
     IMG_Quit();
     SDL_Quit();
 }
+
+#endif

@@ -1,5 +1,9 @@
+#ifndef POTION_H
+#define POTION_H
+
 #include "texture.h"
 #include "player.h"
+#include "slime.h"
 #include <string>
 
 class Potion {
@@ -9,7 +13,7 @@ private:
     int points;
     bool isVisible = false;
     
-    // Position and size
+    // Position and dimensions
     int x, y, width, height;
     
 public:
@@ -19,11 +23,12 @@ public:
     : texture(texture), path(path), name(name), points(points) {}
 
     // Methods
+    void setPosition(Potion *healthPotion, std::vector<Slime*> &slimes, int healthPotionHolder);
+    void spawnPotion(Player *player, std::vector<Slime*> &slimes, int &holder);
     SDL_Rect getBoundingBox() { return { x, y, width, height }; }
     SDL_Point getBoundingBoxCenter();
     bool loadMedia();
     void resetStates();
-
 
     // Getters
     std::string getPath() const { return path; }
@@ -44,24 +49,4 @@ public:
     void setIsVisible(bool isVisible) { this->isVisible = isVisible; }
 };
 
-// Load image into texture
-bool Potion::loadMedia() {
-    if (!texture.loadFromFile(path.c_str())) {
-        std::cout << "Failed to load texture image " << path.c_str() << std::endl;
-        return false;
-    }
-    return true;
-}
-
-SDL_Point Potion::getBoundingBoxCenter() {
-    SDL_Rect boundingBox = getBoundingBox();
-    SDL_Point center;
-    center.x = boundingBox.x + boundingBox.w / 2; 
-    center.y = boundingBox.y + boundingBox.h / 2; 
-    return center;
-}
-
-// Reset potion states
-void Potion::resetStates() {
-    isVisible = false;
-}
+#endif

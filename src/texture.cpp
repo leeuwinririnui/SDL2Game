@@ -1,45 +1,4 @@
-#ifndef TEXTURE
-#define TEXTURE
-
-#include "includes.h"
-
-class LTexture {
-private:
-    SDL_Renderer* gameRenderer;
-    
-    // The actual hardware texture
-    SDL_Texture* mTexture;
-
-    // Image dimensions
-    int mWidth;
-    int mHeight;
-    
-public:
-    // Initialize variables
-    LTexture(SDL_Renderer*& gameRenderer);
-
-    // Deallocate memory
-    ~LTexture();
-
-    // Get texture
-    SDL_Texture *getSDLTexture() { return mTexture; }
-
-    // Set game renderer
-    void setRenderer(SDL_Renderer *&gameRenderer);
-
-    // Loads image 
-    bool loadFromFile(std::string path);
-
-    // Deallocate texture
-    void free();
-
-    // Renders texture at given point
-    void render(int x, int y, SDL_Rect *clip = nullptr, int scale = 1, SDL_RendererFlip flip = SDL_FLIP_NONE);
-
-    // Get image dimensions
-    int getWidth();
-    int getHeight();
-};
+#include "texture.h"
 
 // Constructor
 LTexture::LTexture(SDL_Renderer*& gameRenderer) {
@@ -111,19 +70,21 @@ void LTexture::free() {
 }
 
 // Render texture at specified position with optional parameters
-void LTexture::render(int x, int y, SDL_Rect *clip, int scale, SDL_RendererFlip flip) {
+void LTexture::render(int x, int y, SDL_Rect *clip, int scale, SDL_RendererFlip flip, bool isVerticle) {
     // Set rendering space and render to screen
     SDL_Rect renderQuad = { x, y, mWidth * scale, mHeight * scale };
-
+    
     if (clip) {
         renderQuad.w = clip->w * scale;
         renderQuad.h = clip->h * scale;
     }
-
-    SDL_RenderCopyEx(gameRenderer, mTexture, clip, &renderQuad, 0.0, nullptr, flip);
+    
+    if (isVerticle) {
+        SDL_RenderCopyEx(gameRenderer, mTexture, clip, &renderQuad, 90, nullptr, flip);
+    } else {
+        SDL_RenderCopyEx(gameRenderer, mTexture, clip, &renderQuad, 0.0, nullptr, flip);
+    }
 }
 
 int LTexture::getWidth() { return mWidth; }
 int LTexture::getHeight() { return mHeight; }
-
-#endif
