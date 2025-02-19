@@ -1,14 +1,14 @@
 #include "health.h"
 
 // Apply potions affect to character
-void HealthPotion::applyEffect(Character *character) {
-    int health = character->getHealth();
+void HealthPotion::applyEffect(std::unique_ptr<Player>& player) {
+    int health = player->getHealth();
     
-    character->setHealth(health + 20);
+    player->setHealth(health + 20);
 }
 
 // Handle player colliding with healh potion
-void HealthPotion::playerUsesPotion(HealthPotion *healthPotion, Player *player, int &healthPotionHolder) {
+void HealthPotion::playerUsesPotion(std::unique_ptr<HealthPotion>& healthPotion, std::unique_ptr<Player>& player, int &healthPotionHolder) {
     if (!healthPotion->getIsVisible()) return;
 
     SDL_Point potionCenter = healthPotion->getBoundingBoxCenter();

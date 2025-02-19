@@ -3,7 +3,7 @@
 
 #include "texture.h"
 
-// Enumarator to track directions
+// Enumerator to track directions
 enum Direction {
     Down,
     Right, 
@@ -13,6 +13,7 @@ enum Direction {
 
 class Character {
 protected:
+    std::string name;
     int health;
     std::string path;
     std::vector<SDL_Rect> &clips;
@@ -36,13 +37,16 @@ protected:
     int deathRow;
 
 public:
+    // Reference an existing texture (Pass by reference) rather than making a copy of it
     LTexture &texture;
 
     // Constructor
-    Character(int health, LTexture &texture, const std::string &path, std::vector<SDL_Rect> &clips, 
+    Character(std::string name, int health, LTexture &texture, const std::string &path, std::vector<SDL_Rect> &clips, 
         int frameWidth, int frameHeight, int row, int offset, int direction, int currentFrame,
         bool isMoving, bool isAttacking, SDL_RendererFlip flip, int scale, int posX, int posY,
         int frameTime, bool isAlive, int padding, int attackCooldown, int speed);
+
+    ~Character() { std::cout << "Character Destructor Called for " << name << "..." << std::endl; }
             
     // Functions to set color tint  
     void setRedTint() { SDL_SetTextureColorMod(texture.getSDLTexture(), 255, 100, 100); }

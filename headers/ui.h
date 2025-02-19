@@ -12,6 +12,8 @@ private:
 public:
     UI(std::string fontPath, int screenWidth, int screenHeight) 
     : fontPath(fontPath), screenWidth(screenWidth), screenHeight(screenHeight) {}
+
+    ~UI() { std::cout << "Destructor call for UI..." << std::endl; }
     
     void renderStartScreen(SDL_Renderer *renderer, bool &running);
     void renderEndScreen(SDL_Renderer *renderer, bool &running, int &points);

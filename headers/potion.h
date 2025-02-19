@@ -21,10 +21,12 @@ public:
 
     Potion(LTexture &texture, std::string path, std::string name, int points) 
     : texture(texture), path(path), name(name), points(points) {}
-
+    
+    ~Potion() { std::cout << "Destructor call for " << name << "..." << std::endl; }
+    
     // Methods
-    void setPosition(Potion *healthPotion, std::vector<Slime*> &slimes, int healthPotionHolder);
-    void spawnPotion(Player *player, std::vector<Slime*> &slimes, int &holder);
+    void setPosition(Potion* potion, std::vector<std::unique_ptr<Slime>>& slimes, int healthPotionHolder);
+    void spawnPotion(std::unique_ptr<Player>& player, std::vector<std::unique_ptr<Slime>>& slimes, int &holder);
     SDL_Rect getBoundingBox() { return { x, y, width, height }; }
     SDL_Point getBoundingBoxCenter();
     bool loadMedia();

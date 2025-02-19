@@ -13,7 +13,7 @@ private:
     Uint32 lastFlashTime = 0, lastRecoveryTime = 0, flashCooldown = 500;
 
 public:
-    // Use constructor from Character class
+    // Use constructor and destructor from Character class
     using Character::Character;
 
     // Override resetStates method
@@ -23,9 +23,9 @@ public:
     void setFlashing(bool isFlashing);
     void setRecovering(bool isRecovering);
     void updateTint(Uint32 currentTime);
-    void movement(const Uint8 *keyStates, Player *player, Dust *dust);
-    void attack(const Uint8 *keyStates, Player *player, Uint32 currentTime);
-    void handleDamage(Slime *slime, int &playerPoints);
+    void movement(const Uint8 *keyStates, std::unique_ptr<Player>& player, std::unique_ptr<Dust>& dust);
+    void attack(const Uint8 *keyStates, std::unique_ptr<Player>& player, Uint32 currentTime);
+    void handleDamage(std::unique_ptr<Slime>& slime, int &playerPoints);
 
     // Getters
     bool getFlashing() const { return isFlashing; }

@@ -8,8 +8,8 @@ public:
     using Potion::Potion;
 
     // Function to apply potions effect
-    void applyEffect(Character *character);
-    void playerUsesPotion(HealthPotion *healthPotion, Player *player, int &healthPotionHolder);
+    void applyEffect(std::unique_ptr<Player>& player);
+    void playerUsesPotion(std::unique_ptr<HealthPotion>& healthPotion, std::unique_ptr<Player>& player, int &healthPotionHolder);
 };
 
 #endif

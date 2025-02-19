@@ -1,7 +1,7 @@
 #include "potion.h"
 
 // Set x and y position of potion
-void Potion::setPosition(Potion *potion, std::vector<Slime*> &slimes, int holder) {
+void Potion::setPosition(Potion* potion, std::vector<std::unique_ptr<Slime>>& slimes, int holder) {
     if (holder != -1 && !slimes[holder]->getAlive() && !slimes[holder]->getRespawning()) {
         int posX = slimes[holder]->getPosX();
         int posY = slimes[holder]->getPosY();
@@ -12,7 +12,7 @@ void Potion::setPosition(Potion *potion, std::vector<Slime*> &slimes, int holder
 }
 
 // Spawn heath potion with a 1 in 10 chance
-void Potion::spawnPotion(Player *player, std::vector<Slime*> &slimes, int &holder) {
+void Potion::spawnPotion(std::unique_ptr<Player>& player, std::vector<std::unique_ptr<Slime>>& slimes, int &holder) {
     if (holder != -1) return;
 
     // 1 in 10 chance to spawn potion

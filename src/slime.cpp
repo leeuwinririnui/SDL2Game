@@ -18,11 +18,11 @@ void Slime::resetStates() {
 }
 
 // Check is path is blocked by other slimes
-bool Slime::isBlocked(int nextX, int nextY, const std::vector<Slime*> &slimes) {
-    for (Character *otherSlime : slimes) {
-        if (otherSlime == this) continue;
+bool Slime::isBlocked(int nextX, int nextY, const std::vector<std::unique_ptr<Slime>>& slimes) {
+    for (const std::unique_ptr<Slime>& otherSlimePtr : slimes) {
+        if (otherSlimePtr.get() == this) continue;
 
-        SDL_Rect otherBox = otherSlime->getBoundingBox();
+        SDL_Rect otherBox = otherSlimePtr->getBoundingBox();
         SDL_Rect nextBox = { nextX, nextY, frameWidth,frameHeight };
 
         // Check if the next position intersects with another another slime's bounding box
@@ -35,7 +35,7 @@ bool Slime::isBlocked(int nextX, int nextY, const std::vector<Slime*> &slimes) {
 }
 
 // Handle movement for slime
-void Slime::movement(Player *player, const std::vector<Slime*> &slimes) {
+void Slime::movement(std::unique_ptr<Player>& player, const std::vector<std::unique_ptr<Slime>>& slimes) {
     isMoving = true;
 
     SDL_Point playerCenter = player->getBoundingBoxCenter();
@@ -78,7 +78,7 @@ void Slime::movement(Player *player, const std::vector<Slime*> &slimes) {
 }
 
 // Handle slime attacks
-void Slime::attack(Player *player, Uint32 currentTime) {
+void Slime::attack(std::unique_ptr<Player>& player, Uint32 currentTime) {
     if (!isAttacking) {
         isAttacking = true;
         currentFrame = 0;

@@ -25,14 +25,14 @@ enum GameState {
 };
 
 // --------------------------- FUNCTION DECLARATIONS ---------------------------
-void processGameEvents(SDL_Event &event, bool &running);
-bool isPlayerCollidingWithSlime(Player *player,Slime *slime);
-bool isSlimeCollidingWithPlayer(Player *player, Slime *slime);
-void handlePlayerActions(const Uint8 *keyStates, Player *player, Uint32 currentTime, Dust *dust);
-void handleSlimeActions(std::vector<Slime*> &slimes, Player *player);
-void handleCollisions(Player *player, std::vector<Slime*> &slimes, int &playerPoints, Uint32 currentTime);
-void updateFrames(Dust *dust, Player *player, std::vector<Slime*> &slimes, Uint32 currentTime); 
-void renderBoundingBox(SDL_Renderer *renderer, Character *character, SDL_Color color); 
+void processGameEvents(SDL_Event& event, bool &running);
+bool isPlayerCollidingWithSlime(std::unique_ptr<Player>& player, std::unique_ptr<Slime>& slime);
+bool isSlimeCollidingWithPlayer(std::unique_ptr<Player>& player, std::unique_ptr<Slime>& slime);
+void handlePlayerActions(const Uint8* keyStates, std::unique_ptr<Player>& player, Uint32 currentTime, std::unique_ptr<Dust>& dust);
+void handleSlimeActions(std::vector<std::unique_ptr<Slime>>& slimes, std::unique_ptr<Player>& player);
+void handleCollisions(std::unique_ptr<Player>& player, std::vector<std::unique_ptr<Slime>>& slimes, int& playerPoints, Uint32 currentTime);
+void updateFrames(std::unique_ptr<Dust>& dust, std::unique_ptr<Player>& player, std::vector<std::unique_ptr<Slime>>& slime, Uint32 currentTime); 
+void renderBoundingBox(SDL_Renderer *renderer, std::unique_ptr<Player>& player, SDL_Color color); 
 
 int main(int argc, char *argv[]) {
     SDL_Window* gameWindow = nullptr;
@@ -48,18 +48,23 @@ int main(int argc, char *argv[]) {
     }
 
     // Textures 
-    LTexture *map = new LTexture(renderer);
+    std::unique_ptr<LTexture> map = std::make_unique<LTexture>(renderer);
     LTexture dustTexture(renderer);
     LTexture playerTexture(renderer);
     LTexture slimeTexture(renderer);
     LTexture healthTexture(renderer);
 
     // UI setup
-    UI *uI = new UI(PATHTOFONT, SCREEN_WIDTH, SCREEN_HEIGHT);
+    std::unique_ptr<UI> uI = std::make_unique<UI>(PATHTOFONT, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // Potions setup
     std::string healthPath = "./sprites/potions/Potion 3.png";
-    HealthPotion *healthPotion = new HealthPotion(healthTexture, healthPath, "Health Potion", 20);
+    std::unique_ptr<HealthPotion> healthPotion = std::make_unique<HealthPotion>(
+        healthTexture, 
+        healthPath, 
+        "Health Potion", 
+        20
+    );
     healthPotion->setSize(32, 32);
     healthPotion->loadMedia();
 
@@ -72,14 +77,14 @@ int main(int argc, char *argv[]) {
 
     // Dust setup
     std::vector<SDL_Rect> dustClips(4);
-    Dust *dust = new Dust(dustTexture, 100, 200, 12, 12, 2, PATHTODUST);
+    std::unique_ptr<Dust> dust = std::make_unique<Dust>(dustTexture, 100, 200, 12, 12, 2, PATHTODUST);
     dust->loadMedia();
     dust->clipDust(dustClips);
 
     // Player setup
     std::vector<SDL_Rect> playerClips(6);
-    Player *player = new Player(
-        100, playerTexture, PATHTOPLAYER, playerClips, 48, 48, 0, 8, 0, 0, false,
+    std::unique_ptr<Player> player =  std::make_unique<Player>(
+        "Player", 100, playerTexture, PATHTOPLAYER, playerClips, 48, 48, 0, 8, 0, 0, false,
         false, SDL_FLIP_NONE, PLAYERSCALE, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 
         80, true, 24, 300, 6
     );
@@ -93,16 +98,20 @@ int main(int argc, char *argv[]) {
     player->setMaxY(SCREEN_HEIGHT - player->getBoundingBox().h);
     
      // Slime setup
-    std::vector<Slime*> slimes;
+    std::vector<std::unique_ptr<Slime>> slimes;
     std::vector<std::vector<SDL_Rect>> slimeClips(MAXSLIMES, std::vector<SDL_Rect>(7));
 
     for (int i = 0; i < MAXSLIMES; i++) {
         int randomSpeed = (std::rand() % 3) + 2;
-        Slime *slime = new Slime(
-            20, slimeTexture, PATHTOSLIME, slimeClips[i], 32, 32, 0, 2, 0, 4,
+        
+        std::string name = "Slime " + std::to_string(i + 1);
+
+        std::unique_ptr<Slime> slime = std::make_unique<Slime>(
+            name, 20, slimeTexture, PATHTOSLIME, slimeClips[i], 32, 32, 0, 2, 0, 4,
             false, false, SDL_FLIP_NONE, SLIMESCALE, 0, 0, 140, false, 5, 400, randomSpeed
         );
-        slimes.push_back(slime);
+        // Ensure that ownership of std::unique_ptr is tranferred to vector
+        slimes.push_back(std::move(slime));
     }
 
     // Character animations and media loading
@@ -201,8 +210,8 @@ int main(int argc, char *argv[]) {
             map->render(0, 0, nullptr, 1, SDL_FLIP_NONE);
 
             // Set health potion position and render
-            healthPotion->setPosition(healthPotion, slimes, healthPotionHolder);
-            if (healthPotion->getIsVisible() ) {
+            healthPotion->setPosition(healthPotion.get(), slimes, healthPotionHolder);
+            if (healthPotion->getIsVisible()) {
                 healthPotion->texture.render(healthPotion->getX(), healthPotion->getY(), nullptr, 2, SDL_FLIP_NONE);
             }
 
@@ -258,13 +267,13 @@ void processGameEvents(SDL_Event &event, bool &running) {
 }
 
 // Handle all player actions, including movement and attacks
-void handlePlayerActions(const Uint8 *keyStates, Player *player, Uint32 currentTime, Dust *dust) {
+void handlePlayerActions(const Uint8 *keyStates, std::unique_ptr<Player>& player, Uint32 currentTime, std::unique_ptr<Dust>& dust) {
     player->movement(keyStates, player, dust);
     player->attack(keyStates, player, currentTime);
 }
 
 // Handle all slime actions 
-void handleSlimeActions(std::vector<Slime*> &slimes, Player *player) {
+void handleSlimeActions(std::vector<std::unique_ptr<Slime>>& slimes, std::unique_ptr<Player>& player) {
     for (auto &slime : slimes) {
         if (slime->getAlive()) {
             slime->movement(player, slimes); // Handle movement for alive slimes
@@ -275,8 +284,8 @@ void handleSlimeActions(std::vector<Slime*> &slimes, Player *player) {
 }
 
 // handle collisions between the player and slimes
-void handleCollisions(Player *player, std::vector<Slime*> &slimes, int &playerPoints, Uint32 currentTime) {
-    for (auto &slime : slimes) {
+void handleCollisions(std::unique_ptr<Player>& player, std::vector<std::unique_ptr<Slime>>& slimes, int &playerPoints, Uint32 currentTime) {
+    for (std::unique_ptr<Slime>& slime : slimes) {
         if (isPlayerCollidingWithSlime(player, slime)) {
             std::cout << "Player Colliding" << std::endl;
             player->handleDamage(slime, playerPoints); // Handle player attacking slime
@@ -294,7 +303,7 @@ void handleCollisions(Player *player, std::vector<Slime*> &slimes, int &playerPo
 }
 
 // Check if player is colliding with slime
-bool isPlayerCollidingWithSlime(Player *player, Slime *slime) {
+bool isPlayerCollidingWithSlime(std::unique_ptr<Player>& player, std::unique_ptr<Slime>& slime) {
     SDL_Rect playerBox = player->getBoundingBox();
     SDL_Rect slimeBox = slime->getBoundingBox();
 
@@ -320,7 +329,7 @@ bool isPlayerCollidingWithSlime(Player *player, Slime *slime) {
 }
 
 // Check if slime is colliding with player
-bool isSlimeCollidingWithPlayer(Player *player, Slime *slime) {
+bool isSlimeCollidingWithPlayer(std::unique_ptr<Player>& player, std::unique_ptr<Slime>& slime) {
     SDL_Rect playerBox = player->getBoundingBox();
     SDL_Rect slimeBox = slime->getBoundingBox();
 
@@ -331,7 +340,7 @@ bool isSlimeCollidingWithPlayer(Player *player, Slime *slime) {
 }
 
 // Update animation frames for player and slimes
-void updateFrames(Dust *dust, Player *player, std::vector<Slime*> &slimes, Uint32 currentTime) {
+void updateFrames(std::unique_ptr<Dust>& dust, std::unique_ptr<Player>& player, std::vector<std::unique_ptr<Slime>>& slimes, Uint32 currentTime) {
     // Update dust animation
     if (currentTime - dust->getLastFrame() >= dust->getFrameTime()) {
         dust->setCurrentFrame((dust->getCurrentFrame() + 1) % 3);
@@ -356,7 +365,7 @@ void updateFrames(Dust *dust, Player *player, std::vector<Slime*> &slimes, Uint3
 }
 
 // Render bounding box of character
-void renderBoundingBox(SDL_Renderer *renderer, Character *character, SDL_Color color) {
+void renderBoundingBox(SDL_Renderer *renderer, std::unique_ptr<Character>& character, SDL_Color color) {
     SDL_Rect boundingBox = character->getBoundingBox();
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
     SDL_RenderDrawRect(renderer, &boundingBox);

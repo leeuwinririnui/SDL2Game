@@ -50,7 +50,7 @@ void Player::resetStates() {
 }
 
 // Handle player movement based on keyboard input
-void Player::movement(const Uint8 *keyStates, Player *player, Dust *dust) {
+void Player::movement(const Uint8 *keyStates, std::unique_ptr<Player>& player, std::unique_ptr<Dust>& dust) {
     bool isMoving = false;
 
     SDL_Point playerCenter = player->getBoundingBoxCenter();
@@ -106,7 +106,7 @@ void Player::movement(const Uint8 *keyStates, Player *player, Dust *dust) {
 }
 
 // Handle player attacks
-void Player::attack(const Uint8 *keyStates, Player *player, Uint32 currentTime) {
+void Player::attack(const Uint8 *keyStates, std::unique_ptr<Player>& player, Uint32 currentTime) {
     if (!player->getAttacking() && keyStates[SDL_SCANCODE_SPACE] && currentTime - player->getLastAttack() >= player->getAttackCooldown()) {
         int playerDirection = player->getDirection();
         int attackDistance = 30;
@@ -155,7 +155,7 @@ void Player::attack(const Uint8 *keyStates, Player *player, Uint32 currentTime) 
 }
 
 // Handle damage dealt
-void Player::handleDamage(Slime *slime, int &playerPoints) {
+void Player::handleDamage(std::unique_ptr<Slime>& slime, int &playerPoints) {
     if (isAttacking && slime->getAlive() && currentFrame < 2) {
         int newHealth = slime->getHealth() - 20;
         slime->setHealth(newHealth); // Kill the slime

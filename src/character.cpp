@@ -1,11 +1,11 @@
 #include "character.h"
 
 // Constructor
-Character::Character(int health, LTexture &texture, const std::string &path, std::vector<SDL_Rect> &clips, 
+Character::Character(std::string name, int health, LTexture &texture, const std::string &path, std::vector<SDL_Rect> &clips, 
     int frameWidth, int frameHeight, int row, int offset, int direction, int currentFrame,
     bool isMoving, bool isAttacking, SDL_RendererFlip flip, int scale, int posX, int posY,
     int frameTime, bool isAlive, int padding, int attackCooldown, int speed) 
-    : health(health), texture(texture), path(path), clips(clips), frameWidth(frameWidth), 
+    : name(name), health(health), texture(texture), path(path), clips(clips), frameWidth(frameWidth), 
     frameHeight(frameHeight), row(row), offset(offset), direction(direction), 
     currentFrame(currentFrame), isMoving(isMoving), isAttacking(isAttacking), flip(flip), 
     scale(scale), posX(posX), posY(posY), frameTime(frameTime), isAlive(isAlive), 
